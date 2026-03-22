@@ -1,0 +1,19 @@
+# Build output
+dist/
+
+# Node
+node_modules/
+*.log
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Turbo
+.turbo/

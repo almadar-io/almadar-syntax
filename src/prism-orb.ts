@@ -1,0 +1,187 @@
+/**
+ * Prism.js language definition for .orb files.
+ *
+ * Registry-driven: reads tokens.json (generated from @almadar/operators
+ * and @almadar/patterns) to classify tokens. Unknown operators and
+ * unregistered patterns get error/warning colors.
+ *
+ * @packageDocumentation
+ */
+
+// tokens.json is generated at build time by scripts/generate-tokens.ts
+import tokens from '../dist/tokens.json' with { type: 'json' };
+
+// Build regex patterns from token lists
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function wordsToPattern(words: string[]): string {
+  // Sort longest first so longer matches take priority
+  const sorted = [...words].sort((a, b) => b.length - a.length);
+  return sorted.map(escapeRegex).join('|');
+}
+
+// All known operators (for detecting unknown ones)
+const allOpsSet = new Set(tokens.allOperatorNames);
+const patternsSet = new Set(tokens.patternNames);
+
+// Build namespace-specific patterns
+const namespacePatterns: Record<string, RegExp> = {};
+for (const [ns, ops] of Object.entries(tokens.operatorsByNamespace)) {
+  if ((ops as string[]).length > 0) {
+    namespacePatterns[ns] = new RegExp(`^"(${wordsToPattern(ops as string[])})"$`);
+  }
+}
+
+const effectPattern = new RegExp(`^"(${wordsToPattern(tokens.effectTypes)})"$`);
+const structuralPattern = new RegExp(`^"(${wordsToPattern(tokens.structuralKeys)})"$`);
+const fieldTypePattern = new RegExp(`^"(${wordsToPattern(tokens.fieldTypes)})"$`);
+const persistencePattern = new RegExp(`^"(${wordsToPattern(tokens.persistenceKinds)})"$`);
+const slotPattern = new RegExp(`^"(${wordsToPattern(tokens.uiSlots)})"$`);
+const patternNamesPattern = tokens.patternNames.length > 0
+  ? new RegExp(`^"(${wordsToPattern(tokens.patternNames)})"$`)
+  : null;
+const behaviorPattern = tokens.behaviorNames.length > 0
+  ? new RegExp(`^"(${wordsToPattern(tokens.behaviorNames)})"$`)
+  : null;
+
+/**
+ * Register the 'orb' language with Prism.
+ *
+ * Call this before any code blocks render:
+ *   import { registerOrbLanguage } from '@almadar/syntax';
+ *   registerOrbLanguage(Prism);
+ */
+export function registerOrbLanguage(Prism: Record<string, unknown>): void {
+  const languages = Prism.languages as Record<string, unknown>;
+
+  // Extend JSON as the base grammar
+  const json = languages.json as Record<string, unknown>;
+  if (!json) {
+    console.warn('[almadar-syntax] Prism JSON language not found. Load it first.');
+    return;
+  }
+
+  // Custom tokenizer function for string values
+  // This is where registry-driven classification happens
+  function classifyString(value: string): string {
+    // Bindings: @entity.field, @payload.x, @state, @now, @config
+    if (/^"@(entity|payload|state|now|config|computed|trait)(\.[a-zA-Z0-9_.]+)?"$/.test(value)) {
+      return 'orb-binding';
+    }
+    // Entity references: @PascalCase
+    if (/^"@[A-Z][a-zA-Z0-9]*(\.[a-zA-Z0-9_.]+)?"$/.test(value)) {
+      return 'orb-binding';
+    }
+
+    // Effect operators (check first, they're the most common in .orb files)
+    if (effectPattern.test(value)) return 'orb-effect';
+
+    // Check each operator namespace
+    for (const [ns, pattern] of Object.entries(namespacePatterns)) {
+      if (pattern.test(value)) return `orb-op-${ns}`;
+    }
+
+    // Events: UPPER_SNAKE_CASE (3+ chars)
+    if (/^"[A-Z][A-Z0-9_]{2,}"$/.test(value)) return 'orb-event';
+
+    // UI slots
+    if (slotPattern.test(value)) return 'orb-slot';
+
+    // Structural keys
+    if (structuralPattern.test(value)) return 'orb-structural';
+
+    // Field types
+    if (fieldTypePattern.test(value)) return 'orb-field-type';
+
+    // Persistence kinds
+    if (persistencePattern.test(value)) return 'orb-persistence';
+
+    // Known patterns
+    if (patternNamesPattern?.test(value)) return 'orb-pattern';
+
+    // Standard behaviors
+    if (behaviorPattern?.test(value)) return 'orb-behavior';
+
+    // Check if it looks like an operator but isn't registered (unknown operator)
+    const unquoted = value.slice(1, -1);
+    if (/^[a-z][a-z0-9/\-_]*$/.test(unquoted) && unquoted.includes('/')) {
+      // Looks like a namespaced operator (e.g., "custom/op") but not in registry
+      return 'orb-unknown-op';
+    }
+
+    // Default string
+    return 'orb-string';
+  }
+
+  // Define the orb grammar
+  languages.orb = {
+    ...json,
+    // Override string to add semantic classification
+    string: {
+      pattern: /"(?:\\.|[^\\"\r\n])*"(?:\s*:)?/,
+      greedy: true,
+      inside: {
+        // This is handled by the wrap hook below
+      },
+    },
+    number: /\b-?\d+\.?\d*(?:[eE][+-]?\d+)?\b/,
+    boolean: /\b(?:true|false)\b/,
+    null: /\bnull\b/,
+  };
+
+  // Use Prism's wrap hook to apply CSS classes based on classification
+  const hooks = Prism.hooks as { add: (name: string, cb: (env: Record<string, unknown>) => void) => void };
+  hooks.add('wrap', (env) => {
+    if (env.language !== 'orb') return;
+    if (env.type !== 'string') return;
+
+    const content = env.content as string;
+    // Strip any HTML tags that Prism may have added
+    const text = content.replace(/<[^>]+>/g, '');
+
+    const tokenType = classifyString(text);
+    if (tokenType !== 'orb-string') {
+      const classes = env.classes as string[];
+      classes.push(tokenType);
+    }
+  });
+}
+
+/**
+ * Get the token classification for a string value.
+ * Useful for Monaco and other non-Prism consumers.
+ */
+export function classifyOrbToken(quotedString: string): string {
+  // Reuse the same logic without Prism dependency
+  if (/^"@(entity|payload|state|now|config|computed|trait)(\.[a-zA-Z0-9_.]+)?"$/.test(quotedString)) return 'binding';
+  if (/^"@[A-Z][a-zA-Z0-9]*(\.[a-zA-Z0-9_.]+)?"$/.test(quotedString)) return 'binding';
+  if (effectPattern.test(quotedString)) return 'effect';
+  for (const [ns, pattern] of Object.entries(namespacePatterns)) {
+    if (pattern.test(quotedString)) return ns;
+  }
+  if (/^"[A-Z][A-Z0-9_]{2,}"$/.test(quotedString)) return 'event';
+  if (slotPattern.test(quotedString)) return 'slot';
+  if (structuralPattern.test(quotedString)) return 'structural';
+  if (fieldTypePattern.test(quotedString)) return 'fieldType';
+  if (persistencePattern.test(quotedString)) return 'persistence';
+  if (patternNamesPattern?.test(quotedString)) return 'pattern';
+  if (behaviorPattern?.test(quotedString)) return 'behavior';
+  return 'string';
+}
+
+/**
+ * Check if an operator name is registered.
+ */
+export function isRegisteredOperator(name: string): boolean {
+  return allOpsSet.has(name);
+}
+
+/**
+ * Check if a pattern name is registered.
+ */
+export function isRegisteredPattern(name: string): boolean {
+  return patternsSet.has(name);
+}
