@@ -27,11 +27,11 @@ jobs:
 
       - run: pnpm install --no-frozen-lockfile
 
+      - name: Build (includes token generation)
+        run: pnpm build
+
       - name: Typecheck
         run: pnpm typecheck
-
-      - name: Build
-        run: pnpm build
 
       - name: Lint
         run: pnpm exec eslint --no-warn-ignored --max-warnings 0 src/

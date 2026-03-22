@@ -129,10 +129,8 @@ const tokens = {
   uiSlots,
 };
 
-// Write to dist/
-const outDir = resolve(__dirname, '../dist');
-mkdirSync(outDir, { recursive: true });
-const outPath = resolve(outDir, 'tokens.json');
+// Write to src/ so it's committed and typecheck works without build
+const outPath = resolve(__dirname, '../src/tokens.json');
 writeFileSync(outPath, JSON.stringify(tokens, null, 2));
 
 console.log(`Generated tokens.json:`);
