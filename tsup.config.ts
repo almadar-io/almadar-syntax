@@ -4,7 +4,7 @@ import { resolve } from 'path';
 
 export default defineConfig({
   entry: ['src/index.ts', 'src/prism-orb.ts', 'src/colors.ts'],
-  format: ['esm'],
+  format: ['esm', 'cjs'],
   dts: true,
   clean: true,
   sourcemap: true,
