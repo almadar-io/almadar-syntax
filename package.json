@@ -1,6 +1,6 @@
 {
   "name": "@almadar/syntax",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Registry-driven syntax highlighting for Orb programs. Colors align with AVL visual language.",
   "type": "module",
   "main": "./dist/index.js",

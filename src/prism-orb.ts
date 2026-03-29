@@ -64,90 +64,77 @@ export function registerOrbLanguage(Prism: Record<string, unknown>): void {
     return;
   }
 
-  // Custom tokenizer function for string values
-  // This is where registry-driven classification happens
-  function classifyString(value: string): string {
-    // Bindings: @entity.field, @payload.x, @state, @now, @config
-    if (/^"@(entity|payload|state|now|config|computed|trait)(\.[a-zA-Z0-9_.]+)?"$/.test(value)) {
-      return 'orb-binding';
-    }
-    // Entity references: @PascalCase
-    if (/^"@[A-Z][a-zA-Z0-9]*(\.[a-zA-Z0-9_.]+)?"$/.test(value)) {
-      return 'orb-binding';
-    }
+  // Build inside grammar for semantic string classification.
+  // Refractor-compatible: uses standard Prism `inside` tokenization,
+  // no hooks. Order matters (first match wins).
+  const orbInside: Record<string, RegExp | { pattern: RegExp }> = {};
 
-    // Effect operators (check first, they're the most common in .orb files)
-    if (effectPattern.test(value)) return 'orb-effect';
+  // 1. Bindings: @entity.field, @payload.x, @Entity.field
+  orbInside['orb-binding'] = /"@(?:entity|payload|state|now|config|computed|trait)(?:\.[a-zA-Z0-9_.]+)?"|"@[A-Z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9_.]+)?"/;
 
-    // Check each operator namespace
-    for (const [ns, pattern] of Object.entries(namespacePatterns)) {
-      if (pattern.test(value)) return `orb-op-${ns}`;
-    }
-
-    // Events: UPPER_SNAKE_CASE (3+ chars)
-    if (/^"[A-Z][A-Z0-9_]{2,}"$/.test(value)) return 'orb-event';
-
-    // UI slots
-    if (slotPattern.test(value)) return 'orb-slot';
-
-    // Structural keys
-    if (structuralPattern.test(value)) return 'orb-structural';
-
-    // Field types
-    if (fieldTypePattern.test(value)) return 'orb-field-type';
-
-    // Persistence kinds
-    if (persistencePattern.test(value)) return 'orb-persistence';
-
-    // Known patterns
-    if (patternNamesPattern?.test(value)) return 'orb-pattern';
-
-    // Standard behaviors
-    if (behaviorPattern?.test(value)) return 'orb-behavior';
-
-    // Check if it looks like an operator but isn't registered (unknown operator)
-    const unquoted = value.slice(1, -1);
-    if (/^[a-z][a-z0-9/\-_]*$/.test(unquoted) && unquoted.includes('/')) {
-      // Looks like a namespaced operator (e.g., "custom/op") but not in registry
-      return 'orb-unknown-op';
-    }
-
-    // Default string
-    return 'orb-string';
+  // 2. Effect types
+  if (tokens.effectTypes.length > 0) {
+    orbInside['orb-effect'] = new RegExp(`"(?:${wordsToPattern(tokens.effectTypes)})"`);
   }
 
-  // Define the orb grammar
+  // 3. Operator namespaces
+  for (const [ns, ops] of Object.entries(tokens.operatorsByNamespace)) {
+    if ((ops as string[]).length > 0) {
+      orbInside[`orb-op-${ns}`] = new RegExp(`"(?:${wordsToPattern(ops as string[])})"`);
+    }
+  }
+
+  // 4. Events: UPPER_SNAKE_CASE (3+ chars)
+  orbInside['orb-event'] = /"[A-Z][A-Z0-9_]{2,}"/;
+
+  // 5. UI slots
+  if (tokens.uiSlots.length > 0) {
+    orbInside['orb-slot'] = new RegExp(`"(?:${wordsToPattern(tokens.uiSlots)})"`);
+  }
+
+  // 6. Structural keys
+  if (tokens.structuralKeys.length > 0) {
+    orbInside['orb-structural'] = new RegExp(`"(?:${wordsToPattern(tokens.structuralKeys)})"`);
+  }
+
+  // 7. Field types
+  if (tokens.fieldTypes.length > 0) {
+    orbInside['orb-field-type'] = new RegExp(`"(?:${wordsToPattern(tokens.fieldTypes)})"`);
+  }
+
+  // 8. Persistence kinds
+  if (tokens.persistenceKinds.length > 0) {
+    orbInside['orb-persistence'] = new RegExp(`"(?:${wordsToPattern(tokens.persistenceKinds)})"`);
+  }
+
+  // 9. Pattern names
+  if (tokens.patternNames.length > 0) {
+    orbInside['orb-pattern'] = new RegExp(`"(?:${wordsToPattern(tokens.patternNames)})"`);
+  }
+
+  // 10. Behavior names
+  if (tokens.behaviorNames.length > 0) {
+    orbInside['orb-behavior'] = new RegExp(`"(?:${wordsToPattern(tokens.behaviorNames)})"`);
+  }
+
+  // 11. Unknown operators: namespaced identifiers not in registry
+  orbInside['orb-unknown-op'] = /"[a-z][a-z0-9_-]*\/[a-z][a-z0-9/_-]*"/;
+
+  // Clone JSON property and string tokens, adding the inside grammar
+  const jsonProp = json.property as Record<string, unknown>;
+  const jsonStr = json.string as Record<string, unknown>;
+
   languages.orb = {
     ...json,
-    // Override string to add semantic classification
-    string: {
-      pattern: /"(?:\\.|[^\\"\r\n])*"(?:\s*:)?/,
-      greedy: true,
-      inside: {
-        // This is handled by the wrap hook below
-      },
+    property: {
+      ...(typeof jsonProp === 'object' ? jsonProp : { pattern: jsonProp }),
+      inside: orbInside,
     },
-    number: /\b-?\d+\.?\d*(?:[eE][+-]?\d+)?\b/,
-    boolean: /\b(?:true|false)\b/,
-    null: /\bnull\b/,
+    string: {
+      ...(typeof jsonStr === 'object' ? jsonStr : { pattern: jsonStr }),
+      inside: orbInside,
+    },
   };
-
-  // Use Prism's wrap hook to apply CSS classes based on classification
-  const hooks = Prism.hooks as { add: (name: string, cb: (env: Record<string, unknown>) => void) => void };
-  hooks.add('wrap', (env) => {
-    if (env.language !== 'orb') return;
-    if (env.type !== 'string') return;
-
-    const content = env.content as string;
-    // Strip any HTML tags that Prism may have added
-    const text = content.replace(/<[^>]+>/g, '');
-
-    const tokenType = classifyString(text);
-    if (tokenType !== 'orb-string') {
-      const classes = env.classes as string[];
-      classes.push(tokenType);
-    }
-  });
 }
 
 /**
