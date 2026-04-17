@@ -65,13 +65,13 @@ const allOperatorNames = Object.keys(operators.operators);
 // Pattern names
 const patternNames = Object.keys(patterns.patterns).sort((a, b) => b.length - a.length);
 
-// Standard behavior names (from std exports directory)
+// Standard behavior names (from the canonical std registry directory)
 const behaviorNames: string[] = [];
 try {
   const { readdirSync } = await import('fs');
-  const exportsDir = resolve(ROOT, 'packages/almadar-std/behaviors/exports');
+  const registryDir = resolve(ROOT, 'packages/almadar-std/behaviors/registry');
   for (const level of ['atoms', 'molecules', 'organisms']) {
-    const dir = resolve(exportsDir, level);
+    const dir = resolve(registryDir, level);
     try {
       for (const f of readdirSync(dir)) {
         if (f.endsWith('.orb')) {
