@@ -2,8 +2,8 @@
 /**
  * Generate tokens.json from live registries.
  *
- * Reads @almadar/operators and @almadar/patterns to build
- * a static snapshot of all valid tokens for the Prism highlighter.
+ * Reads @almadar/std (canonical operator registry) and @almadar/patterns
+ * to build a static snapshot of all valid tokens for the Prism highlighter.
  *
  * Run: npx tsx scripts/generate-tokens.ts
  */
@@ -11,14 +11,11 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { STD_OPERATORS } from '@almadar/std';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT = resolve(__dirname, '../../..');
-
-// Read operators registry
-const operatorsPath = resolve(ROOT, 'packages/almadar-operators/operators.json');
-const operators = JSON.parse(readFileSync(operatorsPath, 'utf-8'));
 
 // Read patterns registry
 const patternsPath = resolve(ROOT, 'packages/almadar-patterns/src/patterns-registry.json');
@@ -47,8 +44,8 @@ const categoryToColorNamespace: Record<string, string> = {
 };
 
 const operatorsByNamespace: Record<string, string[]> = {};
-for (const [name, meta] of Object.entries(operators.operators)) {
-  const category = (meta as Record<string, unknown>).category as string;
+for (const [name, meta] of Object.entries(STD_OPERATORS)) {
+  const category = meta.category;
   const namespace = categoryToColorNamespace[category] ?? 'control';
   if (!operatorsByNamespace[namespace]) operatorsByNamespace[namespace] = [];
   operatorsByNamespace[namespace].push(name);
@@ -60,7 +57,7 @@ for (const ns of Object.keys(operatorsByNamespace)) {
 }
 
 // All operator names (flat)
-const allOperatorNames = Object.keys(operators.operators);
+const allOperatorNames = Object.keys(STD_OPERATORS);
 
 // Pattern names
 const patternNames = Object.keys(patterns.patterns).sort((a, b) => b.length - a.length);

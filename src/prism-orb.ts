@@ -1,7 +1,7 @@
 /**
  * Prism.js language definition for .orb files.
  *
- * Registry-driven: reads tokens.json (generated from @almadar/operators
+ * Registry-driven: reads tokens.json (generated from @almadar/std
  * and @almadar/patterns) to classify tokens. Unknown operators and
  * unregistered patterns get error/warning colors.
  *
