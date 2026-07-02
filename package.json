@@ -1,6 +1,6 @@
 {
   "name": "@almadar/syntax",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Registry-driven syntax highlighting for Orb programs. Colors align with AVL visual language.",
   "type": "module",
   "main": "./dist/index.js",
@@ -29,9 +29,9 @@
     "prepare": "git config core.hooksPath .githooks"
   },
   "dependencies": {
-    "@almadar/core": ">=4.8.2",
-    "@almadar/patterns": ">=2.14.1",
-    "@almadar/std": ">=6.5.0"
+    "@almadar/core": ">=10.13.0",
+    "@almadar/patterns": ">=2.88.1",
+    "@almadar/std": ">=16.103.2"
   },
   "devDependencies": {
     "@almadar/eslint-plugin": ">=2.3.0",

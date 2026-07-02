@@ -62,20 +62,26 @@ const allOperatorNames = Object.keys(STD_OPERATORS);
 // Pattern names
 const patternNames = Object.keys(patterns.patterns).sort((a, b) => b.length - a.length);
 
-// Standard behavior names (from the canonical std registry directory)
+// Standard behavior names (from the canonical std registry directory).
+// Behaviors live per-topic (registry/<topic>/{atoms,molecules,organisms}/*.orb),
+// not flat under registry/ — walk topic dirs, then the 3 tiers within each.
 const behaviorNames: string[] = [];
 try {
-  const { readdirSync } = await import('fs');
+  const { readdirSync, statSync } = await import('fs');
   const registryDir = resolve(ROOT, 'packages/almadar-std/behaviors/registry');
-  for (const level of ['atoms', 'molecules', 'organisms']) {
-    const dir = resolve(registryDir, level);
-    try {
-      for (const f of readdirSync(dir)) {
-        if (f.endsWith('.orb')) {
-          behaviorNames.push(f.replace('.orb', ''));
+  for (const topic of readdirSync(registryDir)) {
+    const topicDir = resolve(registryDir, topic);
+    if (!statSync(topicDir).isDirectory()) continue;
+    for (const level of ['atoms', 'molecules', 'organisms']) {
+      const dir = resolve(topicDir, level);
+      try {
+        for (const f of readdirSync(dir)) {
+          if (f.endsWith('.orb')) {
+            behaviorNames.push(f.replace('.orb', ''));
+          }
         }
-      }
-    } catch { /* directory may not exist */ }
+      } catch { /* tier may not exist for this topic */ }
+    }
   }
 } catch { /* std package may not be available */ }
 
