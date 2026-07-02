@@ -115,6 +115,31 @@ const uiSlots = [
   'toast', 'hud-top', 'hud-bottom', 'floating', 'system', 'content', 'screen',
 ];
 
+// .lolo declaration keywords (distinct from `structuralKeys` above, which are
+// .orb JSON schema object keys — these are bare-word .lolo syntax keywords).
+const loloKeywords = [
+  'app', 'orbital', 'uses', 'from', 'entity', 'type', 'derived', 'extends',
+  'trait', 'initial', 'state', 'for', 'emits', 'listens', 'ticks', 'config',
+  'page', 'with',
+];
+
+// .lolo primitive type keywords (distinct from `fieldTypes` above, which
+// describes @almadar/core's EntityField.type enum — these are the literal
+// type-name tokens .lolo's own grammar recognizes).
+const loloPrimitiveTypes = ['string', 'number', 'boolean', 'date', 'timestamp', 'datetime', 'int'];
+
+// .lolo entity-persistence AND event-scope keywords in one class (distinct
+// from `persistenceKinds` above, which covers entity persistence only —
+// .lolo's own highlighter merges the entity-persistence tags with the
+// emitsScope local/internal/external tags into a single token class).
+const loloPersistenceAndScope = ['persistent', 'runtime', 'singleton', 'instance', 'local', 'internal', 'external'];
+
+// .lolo trait category tags (the `[category]` marker after a trait's entity name).
+const loloTraitCategories = [
+  'interaction', 'integration', 'lifecycle', 'temporal', 'validation', 'notification', 'agent',
+  'game-core', 'game-character', 'game-ai', 'game-combat', 'game-items', 'game-cards', 'game-board', 'game-puzzle',
+];
+
 // Build the tokens file
 const tokens = {
   generatedAt: new Date().toISOString(),
@@ -130,6 +155,10 @@ const tokens = {
   persistenceKinds,
   effectTypes,
   uiSlots,
+  loloKeywords,
+  loloPrimitiveTypes,
+  loloPersistenceAndScope,
+  loloTraitCategories,
 };
 
 // Write to src/ so it's committed and typecheck works without build

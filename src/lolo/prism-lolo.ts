@@ -114,7 +114,7 @@ function buildLoloGrammar(): Record<string, unknown> {
     // ── 7. Declaration keywords ──────────────────────────────────────────────
     // Structural keywords that introduce new declarations.
     // Analogous to Haskell's module/import/where/let/in/do/data/type.
-    'keyword': /\b(?:app|orbital|uses|from|entity|type|derived|extends|trait|initial|state|for|emits|listens|ticks|config|page|with)\b/,
+    'keyword': new RegExp(`\\b(?:${wordsToPattern(tokens.loloKeywords)})\\b`),
 
     // ── 8. Effect operators ──────────────────────────────────────────────────
     // Semantic IO primitives: set, persist, fetch, emit, render-ui, navigate …
@@ -137,16 +137,16 @@ function buildLoloGrammar(): Record<string, unknown> {
 
     // ── 11. Primitive types ──────────────────────────────────────────────────
     // Like Haskell's Int, Bool, String. Orange to match .orb fieldType.
-    'lolo-type': /\b(?:string|number|boolean|date|timestamp|datetime|int)\b/,
+    'lolo-type': new RegExp(`\\b(?:${wordsToPattern(tokens.loloPrimitiveTypes)})\\b`),
 
     // ── 12. Persistence and scope keywords ───────────────────────────────────
     // Appear in [persistence: collection] tags and emitsScope / listens blocks.
-    'lolo-persistence': /\b(?:persistent|runtime|singleton|instance|local|internal|external)\b/,
+    'lolo-persistence': new RegExp(`\\b(?:${wordsToPattern(tokens.loloPersistenceAndScope)})\\b`),
 
     // ── 13. Trait category tags ───────────────────────────────────────────────
     // The [category] marker after the entity name in a trait declaration.
     // These map to TraitCategory enum values.
-    'lolo-category': /(?<![a-zA-Z0-9_-])(?:interaction|integration|lifecycle|temporal|validation|notification|agent|game-core|game-character|game-ai|game-combat|game-items|game-cards|game-board|game-puzzle)(?![a-zA-Z0-9_-])/,
+    'lolo-category': new RegExp(`(?<![a-zA-Z0-9_-])(?:${wordsToPattern(tokens.loloTraitCategories)})(?![a-zA-Z0-9_-])`),
 
     // ── 14. Constructor names ─────────────────────────────────────────────────
     // PascalCase identifiers: entity names, trait names, orbital names.
@@ -199,7 +199,7 @@ export function classifyLoloToken(token: string): string {
   if (/^[@?][a-zA-Z_][a-zA-Z0-9_.]*$/.test(token)) return 'binding';
   if (/^[A-Z][a-zA-Z0-9]*(?:\.[a-zA-Z][a-zA-Z0-9]*){1,}$/.test(token)) return 'reference';
   if (/^[A-Z][A-Z0-9_]+$/.test(token)) return 'event';
-  if (/^(?:app|orbital|uses|from|entity|type|derived|extends|trait|initial|state|for|emits|listens|ticks|config|page|with)$/.test(token)) return 'keyword';
+  if (new RegExp(`^(?:${wordsToPattern(tokens.loloKeywords)})$`).test(token)) return 'keyword';
 
   const effectPat = new RegExp(`^(?:${wordsToPattern(effectList)})$`);
   if (effectPat.test(token)) return 'effect';
@@ -209,9 +209,9 @@ export function classifyLoloToken(token: string): string {
     if (pat.test(token)) return `op-${ns}`;
   }
 
-  if (/^(?:string|number|boolean|date|timestamp|datetime|int)$/.test(token)) return 'type';
-  if (/^(?:persistent|runtime|singleton|instance|local|internal|external)$/.test(token)) return 'persistence';
-  if (/^(?:interaction|integration|lifecycle|temporal|validation|notification|agent|game-core|game-character|game-ai|game-combat|game-items|game-cards|game-board|game-puzzle)$/.test(token)) return 'category';
+  if (new RegExp(`^(?:${wordsToPattern(tokens.loloPrimitiveTypes)})$`).test(token)) return 'type';
+  if (new RegExp(`^(?:${wordsToPattern(tokens.loloPersistenceAndScope)})$`).test(token)) return 'persistence';
+  if (new RegExp(`^(?:${wordsToPattern(tokens.loloTraitCategories)})$`).test(token)) return 'category';
   if (/^[A-Z][a-zA-Z0-9]*$/.test(token)) return 'constructor';
 
   if (patternNamesPattern?.test(token)) return 'pattern';
