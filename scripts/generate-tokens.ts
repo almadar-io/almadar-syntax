@@ -21,32 +21,27 @@ const ROOT = resolve(__dirname, '../../..');
 const patternsPath = resolve(ROOT, 'packages/almadar-patterns/src/patterns-registry.json');
 const patterns = JSON.parse(readFileSync(patternsPath, 'utf-8'));
 
-// Group operators by category -> AVL color namespace
+// Collapse a few closely-related raw @almadar/std categories into one AVL
+// color namespace. Any category NOT listed here keeps its own name as the
+// namespace (fallback below) — never silently bucket an unrecognized
+// category into an unrelated one (this previously dumped every operator
+// from any category the map hadn't caught up with, e.g. std-nn/std-tensor/
+// std-train/std-agent/std-vec/std-geo/..., into 'control' alongside genuine
+// control-flow keywords like `let`/`do`/`fn`).
 const categoryToColorNamespace: Record<string, string> = {
-  arithmetic: 'arithmetic',
-  comparison: 'comparison',
-  logic: 'logic',
-  control: 'control',
-  effect: 'effect',
-  collection: 'collection',
   'std-math': 'arithmetic',
+  'std-prob': 'arithmetic',
   'std-str': 'string',
+  'std-format': 'string',
   'std-array': 'collection',
   'std-object': 'collection',
-  'std-time': 'time',
   'std-validate': 'comparison',
-  'std-format': 'string',
-  'std-async': 'async',
-  'std-prob': 'arithmetic',
-  'std-nn': 'async',
-  'std-tensor': 'async',
-  'std-train': 'async',
 };
 
 const operatorsByNamespace: Record<string, string[]> = {};
 for (const [name, meta] of Object.entries(STD_OPERATORS)) {
   const category = meta.category;
-  const namespace = categoryToColorNamespace[category] ?? 'control';
+  const namespace = categoryToColorNamespace[category] ?? category;
   if (!operatorsByNamespace[namespace]) operatorsByNamespace[namespace] = [];
   operatorsByNamespace[namespace].push(name);
 }
@@ -102,12 +97,14 @@ const fieldTypes = [
 // Valid persistence kinds
 const persistenceKinds = ['persistent', 'runtime', 'singleton', 'instance'];
 
-// Valid effect types
-const effectTypes = [
-  'render-ui', 'set', 'persist', 'fetch', 'emit', 'navigate',
-  'notify', 'call-service', 'spawn', 'despawn', 'log', 'wait',
-  'if', 'when', 'do', 'let',
-];
+// Valid effect types — derived from @almadar/std's own 'effect' category so
+// this can't drift the way the old hand-copied list did (it had accreted
+// non-effect control/logic keywords 'if'/'when'/'do'/'let', a no-longer-
+// existent 'wait', and was missing real effects like 'fetch-stream').
+const effectTypes = Object.entries(STD_OPERATORS)
+  .filter(([, meta]) => meta.category === 'effect')
+  .map(([name]) => name)
+  .sort((a, b) => b.length - a.length);
 
 // UI slot names
 const uiSlots = [
