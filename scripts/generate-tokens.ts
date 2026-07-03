@@ -95,7 +95,7 @@ const fieldTypes = [
 ];
 
 // Valid persistence kinds
-const persistenceKinds = ['persistent', 'runtime', 'singleton', 'instance'];
+const persistenceKinds = ['persistent', 'runtime'];
 
 // Valid effect types — derived from @almadar/std's own 'effect' category so
 // this can't drift the way the old hand-copied list did (it had accreted
@@ -128,8 +128,8 @@ const loloPrimitiveTypes = ['string', 'number', 'boolean', 'date', 'timestamp', 
 // .lolo entity-persistence AND event-scope keywords in one class (distinct
 // from `persistenceKinds` above, which covers entity persistence only —
 // .lolo's own highlighter merges the entity-persistence tags with the
-// emitsScope local/internal/external tags into a single token class).
-const loloPersistenceAndScope = ['persistent', 'runtime', 'singleton', 'instance', 'local', 'internal', 'external'];
+// emitsScope internal/external tags into a single token class).
+const loloPersistenceAndScope = ['persistent', 'runtime', 'internal', 'external'];
 
 // .lolo trait category tags (the `[category]` marker after a trait's entity name).
 const loloTraitCategories = [
