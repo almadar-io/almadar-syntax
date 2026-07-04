@@ -1,6 +1,6 @@
 {
   "name": "@almadar/syntax",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Registry-driven syntax highlighting for Orb programs. Colors align with AVL visual language.",
   "type": "module",
   "main": "./dist/index.js",
@@ -40,12 +40,14 @@
     "eslint": "10.0.0",
     "tsup": "^8.0.0",
     "tsx": "^4.7.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "turbo": "^2.8.17"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/almadar-io/almadar-syntax.git"
   },
   "license": "BSL-1.1",
-  "homepage": "https://github.com/almadar-io/almadar#readme"
+  "homepage": "https://github.com/almadar-io/almadar#readme",
+  "packageManager": "pnpm@10.30.3"
 }
