@@ -2,7 +2,7 @@
 /**
  * Generate tokens.json from live registries.
  *
- * Reads @almadar/std (canonical operator registry) and @almadar/patterns
+ * Reads @almadar/std (canonical operator registry) and @almadar/core/patterns
  * to build a static snapshot of all valid tokens for the Prism highlighter.
  *
  * Run: npx tsx scripts/generate-tokens.ts

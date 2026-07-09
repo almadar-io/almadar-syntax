@@ -30,7 +30,6 @@
   },
   "dependencies": {
     "@almadar/core": ">=10.13.0",
-    "@almadar/patterns": ">=2.88.1",
     "@almadar/std": ">=16.103.2"
   },
   "devDependencies": {

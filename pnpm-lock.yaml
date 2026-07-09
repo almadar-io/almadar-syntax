@@ -17,18 +17,15 @@ overrides:
   '@types/three': 0.160.0
   '@almadar/std': ^16.103.2
   '@almadar/ui': ^5.93.0
-  '@almadar/core': ^10.24.0
+  '@almadar/core': ^10.25.0
 
 importers:
 
   .:
     dependencies:
       '@almadar/core':
-        specifier: ^10.24.0
+        specifier: ^10.25.0
         version: link:../almadar-core
-      '@almadar/patterns':
-        specifier: '>=2.88.1'
-        version: 2.88.1
       '@almadar/std':
         specifier: ^16.103.2
         version: link:../almadar-std
@@ -60,16 +57,10 @@ importers:
 
 packages:
 
-  '@almadar/core@10.25.0':
-    resolution: {integrity: sha512-GkwgpunROGSjjO1N9UcTE9Zhy7dXggbrLddXVfWo9C0xbTPzEq4tjAL2PxJSMzkmcxK/R5lNchAqwHMer5fBNw==}
-
   '@almadar/eslint-plugin@2.8.0':
     resolution: {integrity: sha512-8abtGsVP+YBaUEchSfGfQV3ZHEPtWt+4Swtu3P0AFofr+OMSfHLnor4aIwULzag+nHD9FQ7cQkVCTfBVgTHgiw==}
     peerDependencies:
       eslint: '>=8.0.0'
-
-  '@almadar/patterns@2.88.1':
-    resolution: {integrity: sha512-fCeHmHWM0u6+DpbSFfmyBJxe92XNyiQKiksxbwVZvI8bJ8C0/SYxAReN5lmk/t6gtR5Xe/je6qTlLJSe+203Vg==}
 
   '@esbuild/aix-ppc64@0.27.7':
     resolution: {integrity: sha512-EKX3Qwmhz1eMdEJokhALr0YiD0lhQNwDqkPYyPhiSwKrh7/4KRjQc04sZ8db+5DVVnZ1LmbNDI1uAMPEUBnQPg==}
@@ -949,24 +940,12 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
-
 snapshots:
-
-  '@almadar/core@10.25.0':
-    dependencies:
-      '@almadar/patterns': 2.88.1
-      zod: 3.25.76
 
   '@almadar/eslint-plugin@2.8.0(eslint@10.0.0)':
     dependencies:
       eslint: 10.0.0
       jsonc-eslint-parser: 3.1.0
-
-  '@almadar/patterns@2.88.1':
-    dependencies:
-      '@almadar/core': 10.25.0
 
   '@esbuild/aix-ppc64@0.27.7':
     optional: true
@@ -1720,5 +1699,3 @@ snapshots:
   word-wrap@1.2.5: {}
 
   yocto-queue@0.1.0: {}
-
-  zod@3.25.76: {}
