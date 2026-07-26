@@ -91,6 +91,7 @@ const structuralKeys = [
 // Valid field types
 const fieldTypes = [
   'string', 'number', 'boolean', 'date', 'timestamp', 'datetime',
+  'email', 'url', 'phone', 'uuid', 'image',
   'array', 'object', 'enum', 'relation',
 ];
 
@@ -123,7 +124,7 @@ const loloKeywords = [
 // .lolo primitive type keywords (distinct from `fieldTypes` above, which
 // describes @almadar/core's EntityField.type enum — these are the literal
 // type-name tokens .lolo's own grammar recognizes).
-const loloPrimitiveTypes = ['string', 'number', 'boolean', 'date', 'timestamp', 'datetime', 'int'];
+const loloPrimitiveTypes = ['string', 'number', 'boolean', 'date', 'timestamp', 'datetime', 'int', 'email', 'url', 'phone', 'uuid', 'image'];
 
 // .lolo entity-persistence AND event-scope keywords in one class (distinct
 // from `persistenceKinds` above, which covers entity persistence only —
