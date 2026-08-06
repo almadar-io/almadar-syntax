@@ -17,8 +17,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT = resolve(__dirname, '../../..');
 
-// Read patterns registry
-const patternsPath = resolve(ROOT, 'packages/almadar-patterns/src/patterns-registry.json');
+// Read patterns registry (merged from almadar-patterns into almadar-core)
+const patternsPath = resolve(ROOT, 'packages/almadar-core/src/patterns/patterns-registry.json');
 const patterns = JSON.parse(readFileSync(patternsPath, 'utf-8'));
 
 // Collapse a few closely-related raw @almadar/std categories into one AVL
@@ -84,7 +84,7 @@ try {
 const structuralKeys = [
   'name', 'description', 'version', 'orbitals', 'entity', 'traits', 'pages',
   'stateMachine', 'states', 'events', 'transitions', 'fields', 'emits', 'listens',
-  'persistence', 'linkedEntity', 'category', 'collection', 'uses', 'services',
+  'persistence', 'linkedEntity', 'category', 'collection', 'uses', 'expects', 'services',
   'config', 'theme', 'design', 'domainContext', 'designTokens', 'customPatterns',
 ];
 
@@ -116,7 +116,7 @@ const uiSlots = [
 // .lolo declaration keywords (distinct from `structuralKeys` above, which are
 // .orb JSON schema object keys — these are bare-word .lolo syntax keywords).
 const loloKeywords = [
-  'app', 'orbital', 'uses', 'from', 'entity', 'type', 'derived', 'extends',
+  'app', 'orbital', 'uses', 'from', 'expects', 'entity', 'type', 'derived', 'extends',
   'trait', 'initial', 'state', 'for', 'emits', 'listens', 'ticks', 'config',
   'page', 'with',
 ];
