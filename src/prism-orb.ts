@@ -9,25 +9,47 @@
  */
 
 import { tokens, escapeRegex, wordsToPattern, allOpsSet, patternsSet } from './shared.js';
+import { multilingualWords, multilingualOrbKeys, reservedEventWords } from './i18n.js';
+
+// Every word list is English + its `ar`/`sl` spellings, so one grammar
+// highlights a document rendered in any of the three languages. Pattern and
+// behavior names are opaque identifiers the renderer never translates.
+const operatorsByNamespace: Record<string, string[]> = {};
+for (const [ns, ops] of Object.entries(tokens.operatorsByNamespace)) {
+  operatorsByNamespace[ns] = multilingualWords(ops as string[]);
+}
+const effectTypes = multilingualWords(tokens.effectTypes);
+const structuralKeys = multilingualOrbKeys(tokens.structuralKeys);
+const fieldTypes = multilingualWords(tokens.fieldTypes);
+const persistenceKinds = multilingualWords(tokens.persistenceKinds);
+const uiSlots = multilingualWords(tokens.uiSlots);
+const sigilRoots = multilingualWords([
+  'entity', 'payload', 'state', 'now', 'config', 'computed', 'trait', 'user',
+]);
 
 // Build namespace-specific patterns
 const namespacePatterns: Record<string, RegExp> = {};
-for (const [ns, ops] of Object.entries(tokens.operatorsByNamespace)) {
-  if ((ops as string[]).length > 0) {
-    namespacePatterns[ns] = new RegExp(`^"(${wordsToPattern(ops as string[])})"$`);
+for (const [ns, ops] of Object.entries(operatorsByNamespace)) {
+  if (ops.length > 0) {
+    namespacePatterns[ns] = new RegExp(`^"(${wordsToPattern(ops)})"$`, 'u');
   }
 }
 
-const effectPattern = new RegExp(`^"(${wordsToPattern(tokens.effectTypes)})"$`);
-const structuralPattern = new RegExp(`^"(${wordsToPattern(tokens.structuralKeys)})"$`);
-const fieldTypePattern = new RegExp(`^"(${wordsToPattern(tokens.fieldTypes)})"$`);
-const persistencePattern = new RegExp(`^"(${wordsToPattern(tokens.persistenceKinds)})"$`);
-const slotPattern = new RegExp(`^"(${wordsToPattern(tokens.uiSlots)})"$`);
+const effectPattern = new RegExp(`^"(${wordsToPattern(effectTypes)})"$`, 'u');
+const structuralPattern = new RegExp(`^"(${wordsToPattern(structuralKeys)})"$`, 'u');
+const fieldTypePattern = new RegExp(`^"(${wordsToPattern(fieldTypes)})"$`, 'u');
+const persistencePattern = new RegExp(`^"(${wordsToPattern(persistenceKinds)})"$`, 'u');
+const slotPattern = new RegExp(`^"(${wordsToPattern(uiSlots)})"$`, 'u');
+const eventPattern = new RegExp(`^"(?:[A-Z][A-Z0-9_]{2,}|${wordsToPattern(reservedEventWords)})"$`, 'u');
+const bindingPattern = new RegExp(
+  `^"@(?:(?:${wordsToPattern(sigilRoots)})|[A-Z][a-zA-Z0-9]*)(?:\\.[\\p{L}\\p{N}_.]+)?"$`,
+  'u',
+);
 const patternNamesPattern = tokens.patternNames.length > 0
-  ? new RegExp(`^"(${wordsToPattern(tokens.patternNames)})"$`)
+  ? new RegExp(`^"(${wordsToPattern(tokens.patternNames)})"$`, 'u')
   : null;
 const behaviorPattern = tokens.behaviorNames.length > 0
-  ? new RegExp(`^"(${wordsToPattern(tokens.behaviorNames)})"$`)
+  ? new RegExp(`^"(${wordsToPattern(tokens.behaviorNames)})"$`, 'u')
   : null;
 
 /**
@@ -53,41 +75,47 @@ export function registerOrbLanguage(Prism: Record<string, unknown>): void {
   const orbInside: Record<string, RegExp | { pattern: RegExp }> = {};
 
   // 1. Bindings: @entity.field, @payload.x, @Entity.field
-  orbInside['orb-binding'] = /"@(?:entity|payload|state|now|config|computed|trait)(?:\.[a-zA-Z0-9_.]+)?"|"@[A-Z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9_.]+)?"/;
+  orbInside['orb-binding'] = new RegExp(
+    `"@(?:(?:${wordsToPattern(sigilRoots)})|[A-Z][a-zA-Z0-9]*)(?:\\.[\\p{L}\\p{N}_.]+)?"`,
+    'u',
+  );
 
   // 2. Effect types
-  if (tokens.effectTypes.length > 0) {
-    orbInside['orb-effect'] = new RegExp(`"(?:${wordsToPattern(tokens.effectTypes)})"`);
+  if (effectTypes.length > 0) {
+    orbInside['orb-effect'] = new RegExp(`"(?:${wordsToPattern(effectTypes)})"`, 'u');
   }
 
   // 3. Operator namespaces
-  for (const [ns, ops] of Object.entries(tokens.operatorsByNamespace)) {
-    if ((ops as string[]).length > 0) {
-      orbInside[`orb-op-${ns}`] = new RegExp(`"(?:${wordsToPattern(ops as string[])})"`);
+  for (const [ns, ops] of Object.entries(operatorsByNamespace)) {
+    if (ops.length > 0) {
+      orbInside[`orb-op-${ns}`] = new RegExp(`"(?:${wordsToPattern(ops)})"`, 'u');
     }
   }
 
-  // 4. Events: UPPER_SNAKE_CASE (3+ chars)
-  orbInside['orb-event'] = /"[A-Z][A-Z0-9_]{2,}"/;
+  // 4. Events: UPPER_SNAKE_CASE (3+ chars), plus the translated reserved ones
+  orbInside['orb-event'] = new RegExp(
+    `"(?:[A-Z][A-Z0-9_]{2,}|${wordsToPattern(reservedEventWords)})"`,
+    'u',
+  );
 
   // 5. UI slots
-  if (tokens.uiSlots.length > 0) {
-    orbInside['orb-slot'] = new RegExp(`"(?:${wordsToPattern(tokens.uiSlots)})"`);
+  if (uiSlots.length > 0) {
+    orbInside['orb-slot'] = new RegExp(`"(?:${wordsToPattern(uiSlots)})"`, 'u');
   }
 
   // 6. Structural keys
-  if (tokens.structuralKeys.length > 0) {
-    orbInside['orb-structural'] = new RegExp(`"(?:${wordsToPattern(tokens.structuralKeys)})"`);
+  if (structuralKeys.length > 0) {
+    orbInside['orb-structural'] = new RegExp(`"(?:${wordsToPattern(structuralKeys)})"`, 'u');
   }
 
   // 7. Field types
-  if (tokens.fieldTypes.length > 0) {
-    orbInside['orb-field-type'] = new RegExp(`"(?:${wordsToPattern(tokens.fieldTypes)})"`);
+  if (fieldTypes.length > 0) {
+    orbInside['orb-field-type'] = new RegExp(`"(?:${wordsToPattern(fieldTypes)})"`, 'u');
   }
 
   // 8. Persistence kinds
-  if (tokens.persistenceKinds.length > 0) {
-    orbInside['orb-persistence'] = new RegExp(`"(?:${wordsToPattern(tokens.persistenceKinds)})"`);
+  if (persistenceKinds.length > 0) {
+    orbInside['orb-persistence'] = new RegExp(`"(?:${wordsToPattern(persistenceKinds)})"`, 'u');
   }
 
   // 9. Pattern names
@@ -126,13 +154,12 @@ export function registerOrbLanguage(Prism: Record<string, unknown>): void {
  */
 export function classifyOrbToken(quotedString: string): string {
   // Reuse the same logic without Prism dependency
-  if (/^"@(entity|payload|state|now|config|computed|trait)(\.[a-zA-Z0-9_.]+)?"$/.test(quotedString)) return 'binding';
-  if (/^"@[A-Z][a-zA-Z0-9]*(\.[a-zA-Z0-9_.]+)?"$/.test(quotedString)) return 'binding';
+  if (bindingPattern.test(quotedString)) return 'binding';
   if (effectPattern.test(quotedString)) return 'effect';
   for (const [ns, pattern] of Object.entries(namespacePatterns)) {
     if (pattern.test(quotedString)) return ns;
   }
-  if (/^"[A-Z][A-Z0-9_]{2,}"$/.test(quotedString)) return 'event';
+  if (eventPattern.test(quotedString)) return 'event';
   if (slotPattern.test(quotedString)) return 'slot';
   if (structuralPattern.test(quotedString)) return 'structural';
   if (fieldTypePattern.test(quotedString)) return 'fieldType';

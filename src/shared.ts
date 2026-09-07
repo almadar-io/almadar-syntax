@@ -22,7 +22,7 @@ export function escapeRegex(s: string): string {
  * Build a regex alternation from a list of words.
  * Sorts longest-first so longer tokens take priority over shorter prefixes.
  */
-export function wordsToPattern(words: string[]): string {
+export function wordsToPattern(words: readonly string[]): string {
   const sorted = [...words].sort((a, b) => b.length - a.length);
   return sorted.map(escapeRegex).join('|');
 }
@@ -32,9 +32,35 @@ export function wordsToPattern(words: string[]): string {
  * (e.g. `render-ui`, `call-service`, `game-core`). Standard `\b` anchors
  * break at the hyphen, so we use character-class lookahead/lookbehind.
  */
-export function wordsToHyphenSafePattern(words: string[]): string {
+export function wordsToHyphenSafePattern(words: readonly string[]): string {
   const sorted = [...words].sort((a, b) => b.length - a.length);
   return sorted.map(escapeRegex).join('|');
+}
+
+/**
+ * The word-boundary lookaround the grammars anchor keyword lists with.
+ *
+ * `\b` is ASCII-only in JavaScript regex, so it can never match a word in
+ * Arabic script — and it also breaks at the hyphen in `render-ui`. This is
+ * the same character-class lookaround the namespaced-operator patterns
+ * already use, generalized to Unicode so one grammar anchors English,
+ * Arabic and Slovenian alike. Requires the `u` flag.
+ */
+export const UNICODE_WORD_EDGE = '[\\p{L}\\p{N}_-]';
+
+/** `alternation` anchored on Unicode word edges, `u`-flagged. */
+export function unicodeBoundaryRegExp(alternation: string): RegExp {
+  return new RegExp(`(?<!${UNICODE_WORD_EDGE})(?:${alternation})(?!${UNICODE_WORD_EDGE})`, 'u');
+}
+
+/** A word list as one Unicode-word-boundary-anchored pattern. */
+export function wordsToUnicodePattern(words: readonly string[]): RegExp {
+  return unicodeBoundaryRegExp(wordsToPattern(words));
+}
+
+/** A word list as one fully-anchored `^…$` pattern (for `classify*`). */
+export function wordsToAnchoredPattern(words: readonly string[]): RegExp {
+  return new RegExp(`^(?:${wordsToPattern(words)})$`, 'u');
 }
 
 /** Set of all registered operator names (for unknown-operator detection). */

@@ -12,6 +12,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { STD_OPERATORS } from '@almadar/std';
+import { LANGUAGE_CODES, parseOperatorTables } from '@almadar/core/i18n';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -138,6 +139,18 @@ const loloTraitCategories = [
   'game-core', 'game-character', 'game-ai', 'game-combat', 'game-items', 'game-cards', 'game-board', 'game-puzzle',
 ];
 
+// std's per-language operator vocabulary. @almadar/std neither exports nor
+// ships `i18n/`, so a runtime deep-import would break the browser build —
+// snapshot it here alongside every other registry-derived list.
+const i18nOperators: Record<string, Record<string, string>> = {};
+for (const lang of LANGUAGE_CODES) {
+  const path = resolve(ROOT, `packages/almadar-std/i18n/${lang}.json`);
+  i18nOperators[lang] = parseOperatorTables(
+    JSON.parse(readFileSync(path, 'utf-8')),
+    `@almadar/std i18n/${lang}.json`,
+  ).operators;
+}
+
 // Build the tokens file
 const tokens = {
   generatedAt: new Date().toISOString(),
@@ -157,6 +170,7 @@ const tokens = {
   loloPrimitiveTypes,
   loloPersistenceAndScope,
   loloTraitCategories,
+  i18nOperators,
 };
 
 // Write to src/ so it's committed and typecheck works without build
@@ -167,4 +181,5 @@ console.log(`Generated tokens.json:`);
 console.log(`  Operators: ${allOperatorNames.length} (${Object.keys(operatorsByNamespace).length} namespaces)`);
 console.log(`  Patterns: ${patternNames.length}`);
 console.log(`  Behaviors: ${behaviorNames.length}`);
+console.log(`  i18n operators: ${LANGUAGE_CODES.map((l) => `${l}=${Object.keys(i18nOperators[l]).length}`).join(', ')}`);
 console.log(`  Written to: ${outPath}`);

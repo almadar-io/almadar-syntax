@@ -31,5 +31,28 @@ export { registerLoloLanguage, classifyLoloToken } from './lolo/prism-lolo.js';
  */
 export { loloLanguage } from './lolo/refractor-lolo.js';
 
+// ── i18n (English → native rendering) ────────────────────────────────────────
+
+/**
+ * Render an English `.lolo` / `.orb` program in Arabic or Slovenian.
+ *
+ * These are `@almadar/core/i18n`'s `localizeLoloSource` / `localizeOrbValue`
+ * with `@almadar/std`'s operator vocabulary already wired in — core cannot
+ * import std, and std does not publish its `i18n/` tables, so this package
+ * (which depends on both) owns the binding.
+ */
+export { translateLolo, translateOrb, stdOperatorTables } from './i18n.js';
+
+/** The multilingual word lists the grammars are built from. */
+export {
+  NATIVE_LANGUAGES,
+  multilingualWords,
+  multilingualOrbKeys,
+  nativeWords,
+  reservedEventWords,
+  nativeShapeWords,
+} from './i18n.js';
+export type { LanguageCode, OperatorTables, JsonValue } from './i18n.js';
+
 // ── Shared ────────────────────────────────────────────────────────────────────
 export { ORB_COLORS } from './colors.js';

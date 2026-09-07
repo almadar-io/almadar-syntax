@@ -19,7 +19,15 @@
  * @packageDocumentation
  */
 
-import { tokens, wordsToPattern, escapeRegex } from '../shared.js';
+import {
+  tokens,
+  wordsToPattern,
+  wordsToUnicodePattern,
+  wordsToAnchoredPattern,
+  unicodeBoundaryRegExp,
+  escapeRegex,
+} from '../shared.js';
+import { multilingualWords, nativeShapeWords, reservedEventWords } from '../i18n.js';
 
 // ---------------------------------------------------------------------------
 // Build registry-driven patterns from tokens.json
@@ -28,20 +36,22 @@ import { tokens, wordsToPattern, escapeRegex } from '../shared.js';
 // Effect operators (semantic IO: set, persist, fetch, emit, render-ui, ...)
 // These are the canonical LOLO effect primitives. They colour purple (#A78BFA)
 // matching the AvlEffect visual concept in both .orb and .lolo.
-const effectList = tokens.effectTypes;
+const effectList = multilingualWords(tokens.effectTypes);
 
 // Categorised runtime operators by namespace.
 // We skip the 'effect' namespace because effectList already covers it.
 const operatorNamespaces: Record<string, string[]> = {};
 for (const [ns, ops] of Object.entries(tokens.operatorsByNamespace)) {
   if (ns !== 'effect') {
-    operatorNamespaces[ns] = ops as string[];
+    operatorNamespaces[ns] = multilingualWords(ops as string[]);
   }
 }
 
 // Pattern names (for type: "..." values inside render-ui objects)
+// Pattern and behavior names are opaque identifiers — the renderer never
+// translates them, so these two lists stay English-only.
 const patternNamesPattern = tokens.patternNames.length > 0
-  ? new RegExp(`(?<![a-zA-Z0-9_-])(?:${wordsToPattern(tokens.patternNames)})(?![a-zA-Z0-9_-])`)
+  ? wordsToUnicodePattern(tokens.patternNames)
   : null;
 
 // Behavior names (for uses declarations: "std/behaviors/std-modal")
@@ -61,9 +71,7 @@ function buildLoloGrammar(): Record<string, unknown> {
     if (ops.length === 0) continue;
     // Hyphen-safe word boundary: no alnum/hyphen char on either side.
     // Covers namespaced forms (array/map) and bare keywords (and, or, not).
-    opTokens[`lolo-op-${ns}`] = new RegExp(
-      `(?<![a-zA-Z0-9_-])(?:${wordsToPattern(ops)})(?![a-zA-Z0-9_-])`
-    );
+    opTokens[`lolo-op-${ns}`] = wordsToUnicodePattern(ops);
   }
 
   // Unknown namespaced operators — present in source but not in registry.
@@ -100,7 +108,7 @@ function buildLoloGrammar(): Record<string, unknown> {
     // ── 4. Binding sigils: @field, @field.sub, ?field ───────────────────────
     // These are the most distinctive LOLO primitive — no equivalent in
     // Haskell. Cyan to match AvlBindingRef in .orb and AVL design system.
-    'lolo-binding': /[@?][a-zA-Z_][a-zA-Z0-9_.]*/,
+    'lolo-binding': /[@?][\p{L}_][\p{L}\p{N}_.]*/u,
 
     // ── 5. Dotted qualified references: Modal.traits.X, Browse.entity ───────
     // Like qualified module names in Haskell: Data.List.sort.
@@ -109,22 +117,20 @@ function buildLoloGrammar(): Record<string, unknown> {
 
     // ── 6. Event keys: UPPER_SNAKE_CASE (≥ 2 uppercase chars) ────────────────
     // Must come before general keywords to prevent `OPEN` matching `open`.
-    'lolo-event': /\b[A-Z][A-Z0-9_]+\b/,
+    // Author-written events stay UPPER_SNAKE in every language (they are
+    // identifiers); only the reserved ones are translated.
+    'lolo-event': unicodeBoundaryRegExp(`[A-Z][A-Z0-9_]+|${wordsToPattern(reservedEventWords)}`),
 
     // ── 7. Declaration keywords ──────────────────────────────────────────────
     // Structural keywords that introduce new declarations.
     // Analogous to Haskell's module/import/where/let/in/do/data/type.
-    'keyword': new RegExp(`\\b(?:${wordsToPattern(tokens.loloKeywords)})\\b`),
+    'keyword': wordsToUnicodePattern(multilingualWords(tokens.loloKeywords)),
 
     // ── 8. Effect operators ──────────────────────────────────────────────────
     // Semantic IO primitives: set, persist, fetch, emit, render-ui, navigate …
     // Appear as the first token inside a Lisp s-expression: (persist create …)
     // The hyphen-safe boundary handles `render-ui` and `call-service`.
-    ...(effectList.length > 0 ? {
-      'lolo-effect': new RegExp(
-        `(?<![a-zA-Z0-9_-])(?:${wordsToPattern(effectList)})(?![a-zA-Z0-9_-])`
-      )
-    } : {}),
+    ...(effectList.length > 0 ? { 'lolo-effect': wordsToUnicodePattern(effectList) } : {}),
 
     // ── 9. Runtime operators by namespace ────────────────────────────────────
     // Each namespace gets its own token class so themes can apply different
@@ -137,22 +143,22 @@ function buildLoloGrammar(): Record<string, unknown> {
 
     // ── 11. Primitive types ──────────────────────────────────────────────────
     // Like Haskell's Int, Bool, String. Orange to match .orb fieldType.
-    'lolo-type': new RegExp(`\\b(?:${wordsToPattern(tokens.loloPrimitiveTypes)})\\b`),
+    'lolo-type': wordsToUnicodePattern(multilingualWords(tokens.loloPrimitiveTypes)),
 
     // ── 12. Persistence and scope keywords ───────────────────────────────────
     // Appear in [persistence: collection] tags and emitsScope / listens blocks.
-    'lolo-persistence': new RegExp(`\\b(?:${wordsToPattern(tokens.loloPersistenceAndScope)})\\b`),
+    'lolo-persistence': wordsToUnicodePattern(multilingualWords(tokens.loloPersistenceAndScope)),
 
     // ── 13. Trait category tags ───────────────────────────────────────────────
     // The [category] marker after the entity name in a trait declaration.
     // These map to TraitCategory enum values.
-    'lolo-category': new RegExp(`(?<![a-zA-Z0-9_-])(?:${wordsToPattern(tokens.loloTraitCategories)})(?![a-zA-Z0-9_-])`),
+    'lolo-category': wordsToUnicodePattern(multilingualWords(tokens.loloTraitCategories)),
 
     // ── 14. Constructor names ─────────────────────────────────────────────────
     // PascalCase identifiers: entity names, trait names, orbital names.
     // Like Haskell data constructors and type names. Teal to distinguish from
     // declaration keywords (blue) and type primitives (orange).
-    'lolo-constructor': /\b[A-Z][a-zA-Z0-9]*\b/,
+    'lolo-constructor': unicodeBoundaryRegExp(`[A-Z][a-zA-Z0-9]*|${wordsToPattern(nativeShapeWords)}`),
 
     // ── 15. Transition / function arrow ──────────────────────────────────────
     // `->` and `→` are the transition arrow in state machines and the
@@ -163,10 +169,10 @@ function buildLoloGrammar(): Record<string, unknown> {
     'number': /-?(?:\d+\.?\d*)\b/,
 
     // ── 17. Boolean literals ──────────────────────────────────────────────────
-    'boolean': /\b(?:true|false)\b/,
+    'boolean': wordsToUnicodePattern(multilingualWords(['true', 'false'])),
 
     // ── 18. Null ──────────────────────────────────────────────────────────────
-    'null': /\bnull\b/,
+    'null': wordsToUnicodePattern(multilingualWords(['null'])),
 
     // ── 19. Type modifiers and relation markers ───────────────────────────────
     // `!` = required, `*` = relation-many, `+` = relation-non-empty
@@ -196,23 +202,23 @@ export function registerLoloLanguage(Prism: Record<string, unknown>): void {
  * Useful for Monaco and other non-Prism consumers.
  */
 export function classifyLoloToken(token: string): string {
-  if (/^[@?][a-zA-Z_][a-zA-Z0-9_.]*$/.test(token)) return 'binding';
+  if (/^[@?][\p{L}_][\p{L}\p{N}_.]*$/u.test(token)) return 'binding';
   if (/^[A-Z][a-zA-Z0-9]*(?:\.[a-zA-Z][a-zA-Z0-9]*){1,}$/.test(token)) return 'reference';
   if (/^[A-Z][A-Z0-9_]+$/.test(token)) return 'event';
-  if (new RegExp(`^(?:${wordsToPattern(tokens.loloKeywords)})$`).test(token)) return 'keyword';
+  if (wordsToAnchoredPattern(reservedEventWords).test(token)) return 'event';
+  if (wordsToAnchoredPattern(multilingualWords(tokens.loloKeywords)).test(token)) return 'keyword';
 
-  const effectPat = new RegExp(`^(?:${wordsToPattern(effectList)})$`);
-  if (effectPat.test(token)) return 'effect';
+  if (wordsToAnchoredPattern(effectList).test(token)) return 'effect';
 
   for (const [ns, ops] of Object.entries(operatorNamespaces)) {
-    const pat = new RegExp(`^(?:${wordsToPattern(ops as string[])})$`);
-    if (pat.test(token)) return `op-${ns}`;
+    if (wordsToAnchoredPattern(ops).test(token)) return `op-${ns}`;
   }
 
-  if (new RegExp(`^(?:${wordsToPattern(tokens.loloPrimitiveTypes)})$`).test(token)) return 'type';
-  if (new RegExp(`^(?:${wordsToPattern(tokens.loloPersistenceAndScope)})$`).test(token)) return 'persistence';
-  if (new RegExp(`^(?:${wordsToPattern(tokens.loloTraitCategories)})$`).test(token)) return 'category';
+  if (wordsToAnchoredPattern(multilingualWords(tokens.loloPrimitiveTypes)).test(token)) return 'type';
+  if (wordsToAnchoredPattern(multilingualWords(tokens.loloPersistenceAndScope)).test(token)) return 'persistence';
+  if (wordsToAnchoredPattern(multilingualWords(tokens.loloTraitCategories)).test(token)) return 'category';
   if (/^[A-Z][a-zA-Z0-9]*$/.test(token)) return 'constructor';
+  if (wordsToAnchoredPattern(nativeShapeWords).test(token)) return 'constructor';
 
   if (patternNamesPattern?.test(token)) return 'pattern';
   if (behaviorNamesPattern?.test(token)) return 'behavior';

@@ -33,3 +33,6 @@ jobs:
 
       - name: Lint
         run: pnpm exec eslint --no-warn-ignored --max-warnings 0 src/
+
+      - name: Test
+        run: pnpm test
