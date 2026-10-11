@@ -16,11 +16,14 @@
  */
 
 import {
-  coreTables,
+  englishTables,
+  getVocabulary,
   localizeLoloSource,
   localizeMap,
   localizeOrbValue,
-  parseOperatorTables,
+  parseVocabularyPack,
+  registerVocabulary,
+  vocabularyOperators,
   type LanguageCode,
   type OperatorTables,
 } from '@almadar/core/i18n';
@@ -29,20 +32,21 @@ import { tokens } from './shared.js';
 
 export type { LanguageCode, OperatorTables, JsonValue };
 
-/** The languages a program is RENDERED into; `en` is the canonical source. */
-export const NATIVE_LANGUAGES: readonly LanguageCode[] = ['ar', 'sl'];
+/**
+ * The language packs snapshotted into `tokens.json` at build (this package's
+ * devDependencies), registered with `@almadar/core/i18n` on import so a browser
+ * bundle can render them; `en` is the canonical source and needs no pack.
+ */
+export const NATIVE_LANGUAGES: readonly LanguageCode[] = tokens.vocabularyPacks.map((raw, i) => {
+  const pack = parseVocabularyPack(raw, `@almadar/syntax tokens.json#vocabularyPacks[${i}]`);
+  registerVocabulary(pack);
+  return pack.meta.code;
+});
 
-const operatorTableCache = new Map<LanguageCode, OperatorTables>();
-
-/** std's operator vocabulary for `lang`, as `@almadar/core/i18n` expects it. */
+/** A language pack's operator spellings, as `@almadar/core/i18n` expects them. */
 export function stdOperatorTables(lang: LanguageCode): OperatorTables {
-  const cached = operatorTableCache.get(lang);
-  if (cached) return cached;
-  const table = parseOperatorTables(
-    { operators: tokens.i18nOperators[lang] },
-    `@almadar/syntax tokens.json#i18nOperators.${lang}`,
-  );
-  operatorTableCache.set(lang, table);
+  const table = vocabularyOperators(lang);
+  if (!table) throw new Error(`no operator spellings for "${lang}" — English operators are their own names`);
   return table;
 }
 
@@ -51,7 +55,7 @@ export function stdOperatorTables(lang: LanguageCode): OperatorTables {
  * `lang === 'en'` returns the source unchanged.
  */
 export function translateLolo(source: string, lang: LanguageCode): string {
-  return localizeLoloSource(source, lang, { operators: stdOperatorTables(lang) });
+  return localizeLoloSource(source, lang, { operators: vocabularyOperators(lang) });
 }
 
 /**
@@ -64,7 +68,7 @@ export function translateLolo(source: string, lang: LanguageCode): string {
  * core's `lexLolo` states for the `.lolo` side.
  */
 export function translateOrb(json: string | JsonValue, lang: LanguageCode): string | JsonValue {
-  const options = { operators: stdOperatorTables(lang) };
+  const options = { operators: vocabularyOperators(lang) };
   if (typeof json !== 'string') return localizeOrbValue(json, lang, options);
   let parsed: JsonValue;
   try {
@@ -123,7 +127,7 @@ export function nativeWords(words: readonly string[]): string[] {
 export function multilingualOrbKeys(keys: readonly string[]): string[] {
   const out = new Set<string>(keys);
   for (const lang of NATIVE_LANGUAGES) {
-    const table = coreTables[lang].orb;
+    const table = getVocabulary(lang).orb;
     for (const key of keys) {
       const native = table[key];
       if (native !== undefined) out.add(native);
@@ -134,10 +138,10 @@ export function multilingualOrbKeys(keys: readonly string[]): string[] {
 
 /** Reserved event names (`INIT`, …) in all three languages. */
 export const reservedEventWords: readonly string[] = multilingualWords(
-  Object.keys(coreTables.en.reservedEvents),
+  Object.keys(englishTables.reservedEvents),
 );
 
 /** Declaration shapes (`Entity`, `Trait`, …) in `ar`/`sl` only. */
 export const nativeShapeWords: readonly string[] = nativeWords(
-  Object.keys(coreTables.en.shapes),
+  Object.keys(englishTables.shapes),
 );

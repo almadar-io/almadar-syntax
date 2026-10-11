@@ -8,11 +8,12 @@
  * Run: npx tsx scripts/generate-tokens.ts
  */
 
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { STD_OPERATORS } from '@almadar/std';
-import { LANGUAGE_CODES, parseOperatorTables } from '@almadar/core/i18n';
+import { behaviorRegistryDir, discoverBehaviorPackages } from '@almadar/core/behavior-package';
+import { readVocabularyPacks } from '@almadar/core/language-data';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -58,28 +59,24 @@ const allOperatorNames = Object.keys(STD_OPERATORS);
 // Pattern names
 const patternNames = Object.keys(patterns.patterns).sort((a, b) => b.length - a.length);
 
-// Standard behavior names (from the canonical std registry directory).
-// Behaviors live per-topic (registry/<topic>/{atoms,molecules,organisms}/*.orb),
-// not flat under registry/ — walk topic dirs, then the 3 tiers within each.
+// Standard behavior names: the installed @almadar/std's programs, read through its
+// manifest (`behaviorRegistryDir` — a live package's lowered mirror or a published
+// one's registry). Per-topic tiers: <topic>/{atoms,molecules,organisms}/*.orb.
+const stdPackage = discoverBehaviorPackages(resolve(__dirname, '..')).find((pkg) => pkg.name === '@almadar/std');
+if (!stdPackage) throw new Error('@almadar/std is not installed for @almadar/syntax — it is a dependency');
+const registryDir = behaviorRegistryDir(stdPackage);
 const behaviorNames: string[] = [];
-try {
-  const { readdirSync, statSync } = await import('fs');
-  const registryDir = resolve(ROOT, 'packages/almadar-std/behaviors/registry');
-  for (const topic of readdirSync(registryDir)) {
-    const topicDir = resolve(registryDir, topic);
-    if (!statSync(topicDir).isDirectory()) continue;
-    for (const level of ['atoms', 'molecules', 'organisms']) {
-      const dir = resolve(topicDir, level);
-      try {
-        for (const f of readdirSync(dir)) {
-          if (f.endsWith('.orb')) {
-            behaviorNames.push(f.replace('.orb', ''));
-          }
-        }
-      } catch { /* tier may not exist for this topic */ }
+for (const topic of readdirSync(registryDir)) {
+  const topicDir = resolve(registryDir, topic);
+  if (!statSync(topicDir).isDirectory()) continue;
+  for (const level of ['atoms', 'molecules', 'organisms']) {
+    const dir = resolve(topicDir, level);
+    if (!existsSync(dir)) continue;
+    for (const f of readdirSync(dir)) {
+      if (f.endsWith('.orb')) behaviorNames.push(f.replace('.orb', ''));
     }
   }
-} catch { /* std package may not be available */ }
+}
 
 // Structural keys (from @almadar/core schema structure)
 const structuralKeys = [
@@ -139,17 +136,11 @@ const loloTraitCategories = [
   'game-core', 'game-character', 'game-ai', 'game-combat', 'game-items', 'game-cards', 'game-board', 'game-puzzle',
 ];
 
-// std's per-language operator vocabulary. @almadar/std neither exports nor
-// ships `i18n/`, so a runtime deep-import would break the browser build —
-// snapshot it here alongside every other registry-derived list.
-const i18nOperators: Record<string, Record<string, string>> = {};
-for (const lang of LANGUAGE_CODES) {
-  const path = resolve(ROOT, `packages/almadar-std/i18n/${lang}.json`);
-  i18nOperators[lang] = parseOperatorTables(
-    JSON.parse(readFileSync(path, 'utf-8')),
-    `@almadar/std i18n/${lang}.json`,
-  ).operators;
-}
+// The language packs installed for this package (its devDependencies), snapshotted
+// so the browser build carries them — a runtime node_modules walk is Node-only.
+const vocabularyPacks = readVocabularyPacks(resolve(__dirname, '..'), resolve(__dirname, '../.no-user-store')).map(
+  (pack) => pack.vocabulary,
+);
 
 // Build the tokens file
 const tokens = {
@@ -170,7 +161,7 @@ const tokens = {
   loloPrimitiveTypes,
   loloPersistenceAndScope,
   loloTraitCategories,
-  i18nOperators,
+  vocabularyPacks,
 };
 
 // Write to src/ so it's committed and typecheck works without build
@@ -181,5 +172,5 @@ console.log(`Generated tokens.json:`);
 console.log(`  Operators: ${allOperatorNames.length} (${Object.keys(operatorsByNamespace).length} namespaces)`);
 console.log(`  Patterns: ${patternNames.length}`);
 console.log(`  Behaviors: ${behaviorNames.length}`);
-console.log(`  i18n operators: ${LANGUAGE_CODES.map((l) => `${l}=${Object.keys(i18nOperators[l]).length}`).join(', ')}`);
+console.log(`  language packs: ${vocabularyPacks.map((v) => v.meta.code).join(', ') || '(none)'}`);
 console.log(`  Written to: ${outPath}`);

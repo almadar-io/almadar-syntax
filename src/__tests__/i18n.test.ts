@@ -11,7 +11,7 @@ import { existsSync, mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir, homedir } from 'node:os';
 import { join } from 'node:path';
-import { coreTables } from '@almadar/core/i18n';
+import { getVocabulary } from '@almadar/core/i18n';
 import { translateLolo, translateOrb, multilingualWords, multilingualOrbKeys, stdOperatorTables } from '../i18n.js';
 import { classifyLoloToken, registerLoloLanguage } from '../lolo/prism-lolo.js';
 import { classifyOrbToken, registerOrbLanguage } from '../prism-orb.js';
@@ -261,7 +261,7 @@ describe('every operator translation the binding emits canonicalizes back', () =
   // core-side coverage gate never sees.
   for (const lang of ['ar', 'sl'] as const) {
     it(`${lang}: every effect + operator native spelling maps back to exactly one English word`, () => {
-      const effects = coreTables[lang].effects;
+      const effects = getVocabulary(lang).effects;
       const operators = stdOperatorTables(lang).operators;
       const reverse = new Map<string, string>();
       for (const [english, native] of [...Object.entries(effects), ...Object.entries(operators)]) {
