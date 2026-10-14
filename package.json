@@ -1,6 +1,6 @@
 {
   "name": "@almadar/syntax",
-  "version": "1.20.0",
+  "version": "1.21.0",
   "description": "Registry-driven syntax highlighting for Orb programs. Colors align with AVL visual language.",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,6 +20,9 @@
     "registry": "https://registry.npmjs.org",
     "access": "public"
   },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "generate": "tsx scripts/generate-tokens.ts",
     "build": "tsup",
@@ -30,13 +33,13 @@
     "prepare": "git config core.hooksPath .githooks"
   },
   "dependencies": {
-    "@almadar/core": "^10.124.0",
-    "@almadar/std": "^16.248.0"
+    "@almadar/core": "^10.128.0",
+    "@almadar/std": "^16.253.0"
   },
   "devDependencies": {
-    "@almadar/eslint-plugin": "^2.21.0",
-    "@almadar/lolo-ar": "^1.0.0",
-    "@almadar/lolo-sl": "^1.0.0",
+    "@almadar/eslint-plugin": "^2.22.0",
+    "@almadar/lolo-ar": "^1.3.0",
+    "@almadar/lolo-sl": "^1.3.0",
     "@types/node": "^22.0.0",
     "@typescript-eslint/parser": "8.65.0",
     "eslint": "10.0.0",
